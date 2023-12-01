@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "aoc-runner"
+version = "0.1.0"
+description = ""
+authors = ["lone_druid <enikita332@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fire = "^0.5.0"
+pyperclip = "^1.8.2"
+rgbprint = "^4.0.2"
+
+[tool.poetry.scripts]
+runaoc = 'aoc_runner.runner:main'
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
