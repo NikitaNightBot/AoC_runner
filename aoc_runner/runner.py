@@ -1,5 +1,4 @@
 """
-
 A python module for running AOC solutions with a certain project structure being:
 
 solutions/
@@ -36,6 +35,7 @@ try:
     SOLUTION_DIRECTORY_PATH = pathlib.Path(os.environ[ENV_VAR_NAME]).resolve()
 except KeyError:
     raise KeyError(f"Set the \x1B[38;5;129m$ENV:{ENV_VAR_NAME}\x1B[39m environment variable to be the path to the directory with your python solutions." )
+
 DEP_VAR_NAME: str = "AOC_SOLUTION_DEPENDENCY_PATHS"
 SOLUTION_DEPENDENCIES: list[str] = ast.literal_eval(os.environ.get(DEP_VAR_NAME, "[]"))
 
@@ -102,11 +102,8 @@ def run(
 
 def main() -> None:
     # Intended to be run directly.
-    print(SOLUTION_DEPENDENCIES)
     for path in SOLUTION_DEPENDENCIES: # cursed?
         sys.path.append(path)
-        print(path)
-    print(sys.path)
     fire.Fire(run)
 
 if __name__ == "__main__":
