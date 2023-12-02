@@ -17,4 +17,4 @@ class Logger:
 
     def error(self, error_type: Exception, *objects: Any, **kwargs: Any) -> NoReturn:
         self.fmt(f"ERROR:{error_type}", *objects, **kwargs)
-        raise error_type
+        exit(1)
