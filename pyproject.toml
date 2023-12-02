@@ -9,7 +9,7 @@ readme = "README.md"
 python = "^3.11"
 fire = "^0.5.0"
 pyperclip = "^1.8.2"
-rgbprint = "^4.0.2"
+rich = "^13.7.0"
 
 [tool.poetry.scripts]
 runaoc = 'aoc_runner.runner:main'

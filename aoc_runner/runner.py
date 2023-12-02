@@ -15,44 +15,60 @@ solutions/
                     def part_2(cls, file)
                 #
 
+The part_{n} methods can also accept an optional `logger` (structlog) argument.
+
 Run via: run.py {year} {problem_num} {part} [you can provide additional args and kwargs]
 """
 
 import fire
+import logger
 import importlib.util
 import sys
 import os
 import pathlib
 import pyperclip
-import rgbprint
 import time
 import ast
-from typing import Any
+from typing import Any, Callable, TypeVar
 from types import ModuleType
 
-ENV_VAR_NAME: str = "AOC_SOLUTION_DIRECTORY_PATH"
-try:
-    SOLUTION_DIRECTORY_PATH = pathlib.Path(os.environ[ENV_VAR_NAME]).resolve()
-except KeyError:
-    raise KeyError(f"Set the \x1B[38;5;129m$ENV:{ENV_VAR_NAME}\x1B[39m environment variable to be the path to the directory with your python solutions." )
+T: TypeVar = TypeVar("T")
+
+LOGGER: logger.Logger = logger.Logger()  # Configuring left to the user xd
+
+LOG_ARG_NAME: str = "logger"  # optional argument for solution functions
+SOLUTION_ENV_VAR_NAME: str = "AOC_SOLUTION_DIRECTORY_PATH"
+
+if SOLUTION_ENV_VAR_NAME in os.environ:
+    SOLUTION_DIRECTORY_PATH = pathlib.Path(os.environ[SOLUTION_ENV_VAR_NAME]).resolve()
+else:
+    raise KeyError(
+        f"Set the \x1B[38;5;129m$ENV:{SOLUTION_ENV_VAR_NAME}\x1B[39m environment variable to be the path to the directory with your python solutions."
+    )
 
 DEP_VAR_NAME: str = "AOC_SOLUTION_DEPENDENCY_PATHS"
 SOLUTION_DEPENDENCIES: list[str] = ast.literal_eval(os.environ.get(DEP_VAR_NAME, "[]"))
 
-def pretty_print(
-    *objects: Any,
-    sep: str = " ",
-    end: str = "\n",
-    start_color: rgbprint.Color = rgbprint.Color.aqua_marine,
-    end_color: rgbprint.Color = rgbprint.Color.magenta,
-) -> None:
-    rgbprint.gradient_print(
-        *objects,
-        sep=sep,
-        end=end,
-        start_color=start_color,
-        end_color=end_color
-    )
+
+def name_in_function(function: Callable[..., T], arg_name: str) -> bool:
+    return arg_name in function.__code__.co_varnames
+
+
+def add_import_paths(*paths: (str | pathlib.Path) | list[str | pathlib.Path]) -> None:
+    for path_s in paths:
+        if isinstance(path_s, (str, pathlib.Path)):
+            path = str(path_s)
+
+            if pathlib.Path(path).exists():
+                LOGGER.info()
+            else:
+                LOGGER.error()
+
+            if path not in sys.path:
+                sys.path.append(path)
+        else:
+            for path in path_s:
+                add_import_paths(path)
 
 
 def import_by_path(path: str | pathlib.Path, name: str = "<dynamic>") -> ModuleType:
@@ -79,6 +95,13 @@ def run(
 ) -> None:
     # Relying on a certain file structure to get the files based on arguments
     problem_directory = SOLUTION_DIRECTORY_PATH / str(year) / str(problem_num)
+    if problem_directory.exists():
+        LOGGER.info()
+    else:
+        LOGGER.error()
+
+    add_import_paths(SOLUTION_DEPENDENCIES, problem_directory)
+
     solution_file_path = problem_directory / "solution.py"
     problem_input_file_path = problem_directory / inputname
 
@@ -86,25 +109,29 @@ def run(
     solution_module = import_by_path(solution_file_path)
     solution_class = getattr(solution_module, classname)
     part_function = getattr(solution_class, f"part_{part}")
+    if name_in_function(
+        part_function, LOG_ARG_NAME
+    ):  # if the function expects a logger: add it to the kwargs dict
+        kwargs |= {LOG_ARG_NAME: LOGGER}
 
     # Running the solution, providing the input file handle as first argument
     problem_file = problem_input_file_path.open()
     start_time = time.perf_counter()
+    LOGGER.info(f"Running {solution_file_path}")
     solution_result = part_function(problem_file, *args, **kwargs)
     delta_time = time.perf_counter() - start_time
+    LOGGER.info(f"Finished in {delta_time*1000}ms")
+    LOGGER.info(year=year, problem_num=problem_num, part=part, result=solution_result)
 
-    pretty_print(
-        f"Running {solution_file_path}\nYear: {year}\nProblem: {problem_num}\nPart: {part}\nTime taken: {delta_time}s\nResult: {solution_result!r}"
-    )
     pyperclip.copy(repr(solution_result))
 
     problem_file.close()
 
+
 def main() -> None:
     # Intended to be run directly.
-    for path in SOLUTION_DEPENDENCIES: # cursed?
-        sys.path.append(path)
     fire.Fire(run)
+
 
 if __name__ == "__main__":
     main()
