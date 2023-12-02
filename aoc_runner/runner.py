@@ -50,6 +50,10 @@ DEP_VAR_NAME: str = "AOC_SOLUTION_DEPENDENCY_PATHS"
 SOLUTION_DEPENDENCIES: list[str] = ast.literal_eval(os.environ.get(DEP_VAR_NAME, "[]"))
 
 
+def path_fmt(path: str | pathlib.Path):
+    return f"{pathlib.Path(path)}".replace("\\", "/")
+
+
 def name_in_function(function: Callable[..., T], arg_name: str) -> bool:
     return arg_name in function.__code__.co_varnames
 
@@ -60,9 +64,12 @@ def add_import_paths(*paths: (str | pathlib.Path) | list[str | pathlib.Path]) ->
             path = str(path_s)
 
             if pathlib.Path(path).exists():
-                LOGGER.info()
+                LOGGER.info(f"Added {path_fmt(path)} to import paths")
             else:
-                LOGGER.error()
+                LOGGER.error(
+                    FileNotFoundError,
+                    f"The dependency path {path_fmt(path)} doesnt exist",
+                )
 
             if path not in sys.path:
                 sys.path.append(path)
@@ -96,9 +103,15 @@ def run(
     # Relying on a certain file structure to get the files based on arguments
     problem_directory = SOLUTION_DIRECTORY_PATH / str(year) / str(problem_num)
     if problem_directory.exists():
-        LOGGER.info()
+        LOGGER.info(f"Found {path_fmt(problem_directory)}")
     else:
-        LOGGER.error()
+        LOGGER.error(
+            FileNotFoundError,
+            f"{path_fmt(problem_directory)} is not found, check your environment variables and stuff",
+        )
+
+    os.chdir(str(problem_directory))
+    LOGGER.info(f"Set CWD to {path_fmt(problem_directory)}")
 
     add_import_paths(SOLUTION_DEPENDENCIES, problem_directory)
 
@@ -117,7 +130,7 @@ def run(
     # Running the solution, providing the input file handle as first argument
     problem_file = problem_input_file_path.open()
     start_time = time.perf_counter()
-    LOGGER.info(f"Running {solution_file_path}")
+    LOGGER.info(f"Running {path_fmt(solution_file_path)}")
     solution_result = part_function(problem_file, *args, **kwargs)
     delta_time = time.perf_counter() - start_time
     LOGGER.info(f"Finished in {delta_time*1000}ms")
