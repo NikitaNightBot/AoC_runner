@@ -36,7 +36,6 @@ T: TypeVar = TypeVar("T")
 
 LOGGER: logger.Logger = logger.Logger()  # Configuring left to the user xd
 
-LOG_ARG_NAME: str = "logger"  # optional argument for solution functions
 SOLUTION_ENV_VAR_NAME: str = "AOC_SOLUTION_DIRECTORY_PATH"
 
 if SOLUTION_ENV_VAR_NAME in os.environ:
@@ -97,6 +96,7 @@ def run(
     part: int,
     inputname: str = "input",
     classname: str = "Solution",
+    logging: bool = False,
     args: tuple[Any, ...] = (),
     kwargs: dict[str, Any] = {},
 ) -> None:
@@ -119,14 +119,34 @@ def run(
     problem_input_file_path = problem_directory / inputname
 
     # Dynamically loading the module with the solution & gettattring the function from it
-    solution_module = import_by_path(solution_file_path)
-    solution_class = getattr(solution_module, classname)
-    part_function = getattr(solution_class, f"part_{part}")
-    if name_in_function(
-        part_function, LOG_ARG_NAME
-    ):  # if the function expects a logger: add it to the kwargs dict
-        kwargs |= {LOG_ARG_NAME: LOGGER}
-        LOGGER.info(f"Added the logger to kwargs {LOG_ARG_NAME}")
+    try:
+        solution_module = import_by_path(solution_file_path)
+        LOGGER.info(f"Loaded {path_fmt(solution_file_path)}")
+    except Exception:
+        LOGGER.error(FileNotFoundError, f"{path_fmt(solution_file_path)} does not exist")
+
+    try:
+        solution_class = getattr(solution_module, classname)
+        LOGGER.info(f"Found class {classname}")
+    except AttributeError:
+        LOGGER.error(AttributeError, f"{classname} doesnt exist in {solution_file_path}")
+
+    func_name: str = f"part_{part}"
+    try:
+        part_function = getattr(solution_class, func_name)
+        LOGGER.info(f"Found function {func_name}")
+    except AttributeError:
+        LOGGER.error(AttributeError, f"Didnt find {func_name} in the {classname} class")
+        
+    solution_class.logging = logging
+    if logging:
+        solution_class.logger = LOGGER
+        LOGGER.info(f"Set {classname}.logger to", LOGGER)
+    else:
+        solution_class.logger = None
+        LOGGER.info(f"Set {classname}.logger to", None)
+    LOGGER.info(f"Set {classname}.logging to", logging)
+
 
     # Running the solution, providing the input file handle as first argument
     problem_file = problem_input_file_path.open()
