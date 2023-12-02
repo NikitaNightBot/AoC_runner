@@ -126,6 +126,7 @@ def run(
         part_function, LOG_ARG_NAME
     ):  # if the function expects a logger: add it to the kwargs dict
         kwargs |= {LOG_ARG_NAME: LOGGER}
+        LOGGER.info(f"Added the logger to kwargs {LOG_ARG_NAME}")
 
     # Running the solution, providing the input file handle as first argument
     problem_file = problem_input_file_path.open()
